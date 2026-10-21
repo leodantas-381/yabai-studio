@@ -1,0 +1,10 @@
+.DS_Store
+/build/
+/dist/
+/outputs/
+/work/
+.swiftpm/
+*.dmg
+*.zip
+*.app/
+*.dSYM/
