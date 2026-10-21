@@ -65,7 +65,7 @@ Requisitos: macOS, Xcode Command Line Tools e um SDK com SwiftUI. O script compi
 
 ```sh
 xcode-select --install  # se as ferramentas ainda não estiverem instaladas
-./scripts/build.sh
+sh scripts/build.sh
 ```
 
 O app é criado em `build/Yabai Studio.app`. O script compila o skhd a partir da fonte incluída e assina os executáveis localmente.
@@ -73,7 +73,7 @@ O app é criado em `build/Yabai Studio.app`. O script compila o skhd a partir da
 Para gerar o instalador com o atalho para Aplicativos:
 
 ```sh
-./scripts/build.sh --dmg
+sh scripts/build.sh --dmg
 ```
 
 Saída: `dist/Yabai Studio.dmg`.
@@ -81,7 +81,7 @@ Saída: `dist/Yabai Studio.dmg`.
 ### Testes
 
 ```sh
-./scripts/test.sh
+sh scripts/test.sh
 ```
 
 Os testes cobrem a geração dos atalhos, argumentos com espaços e aspas, confirmação da mudança de Mesa, destino inexistente e falha da navegação nativa. Eles usam respostas simuladas e não movimentam suas janelas. A validação de atalhos reais depende das permissões e das configurações do macOS.
