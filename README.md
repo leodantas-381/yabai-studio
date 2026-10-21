@@ -28,7 +28,7 @@ Se houver um `.dmg` disponível nas Releases do repositório:
 3. Em **Conexão**, clique em **Instalar yabai** e siga as instruções para permitir Acessibilidade.
 4. Em **Atalhos**, clique em **Instalar skhd → Ativar atalhos**. O skhd precisa de sua própria permissão de Acessibilidade.
 5. Volte ao Studio e clique em **Já autorizei**.
-6. Ajuste as preferências em **Organização** e clique em **Aplicar ao yabai**.
+6. Ajuste as preferências em **Organização** e clique em **Salvar e aplicar**.
 
 Os builds locais são assinados ad hoc, sem notarização da Apple. As permissões do macOS precisam ser concedidas pelo usuário. O Studio não altera o SIP.
 
@@ -91,6 +91,7 @@ Os testes cobrem a geração dos atalhos, argumentos com espaços e aspas, confi
 Os dados ficam em `~/Library/Application Support/YabaiStudio/`:
 
 - `settings.json`: preferências, perfis e regras.
+- `startup.sh`: ajustes carregados pelo yabai na inicialização, sem o Studio aberto.
 - `Engine/`: executáveis instalados pelo Studio.
 - `skhdrc`: configuração de atalhos gerenciada pelo Studio.
 - `skhdrc.backup`: cópia anterior ao reaplicar os atalhos.
@@ -102,7 +103,7 @@ Os registros não capturam o texto digitado. Eles contêm saídas e erros dos co
 
 ## Limitações atuais
 
-- Aplicar configura o yabai em execução. Para persistir esses ajustes após reiniciá-lo, exporte o script e execute-o ao fim do seu `yabairc`.
+- **Salvar e aplicar** mantém os ajustes após reiniciar o Mac: grava um script próprio, adiciona um bloco ao final do `yabairc` usado pelo serviço e habilita o yabai no login. A configuração anterior recebe um backup. **Aplicar só agora** faz uma alteração temporária. Configurações com saídas antecipadas (`exit`, `exec`, `return`) ou interpretadores não compatíveis exigem integração manual via Exportar.
 - O app não cria Mesas nem altera os atalhos nativos do macOS automaticamente.
 - O tamanho mínimo imposto por um aplicativo pode impedir encaixes pequenos. O Studio não força esse limite nem torna janelas flutuantes automaticamente.
 - A prévia é ilustrativa; não representa a árvore real de janelas.

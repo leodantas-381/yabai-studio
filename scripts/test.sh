@@ -6,3 +6,5 @@ swiftc -parse-as-library Sources/Navigator.swift Tests/NavigationTests.swift -mo
 build/tests/navigation
 swiftc -parse-as-library Sources/HotkeyConfig.swift Tests/HotkeyTests.swift -module-cache-path build/module-cache -o build/tests/hotkeys
 build/tests/hotkeys
+swiftc -parse-as-library Sources/HotkeyConfig.swift Sources/StartupPersistence.swift Tests/StartupTests.swift -module-cache-path build/module-cache -o build/tests/startup
+build/tests/startup

@@ -250,7 +250,7 @@ struct Installer {
             if let index = rules.firstIndex(where: { $0.app == name }) { rules[index].floating = true }
             else { rules.append(Rule(app: name)) }
         }
-        save(); message = "Padrão inspirado no guia do Josean carregado. Clique em Aplicar ao yabai."
+        save(); message = "Padrão inspirado no guia do Josean carregado. Clique em Salvar e aplicar."
     }
     func apply() async {
         guard !busy else { return }; busy = true; defer { busy = false }
@@ -259,7 +259,25 @@ struct Installer {
             let r = await run(c)
             if r.code != 0 { message = "Aplicação interrompida; alguns ajustes podem ter sido aplicados. \(r.output)"; return }
         }
-        save(); message = "Ajustes aplicados. Exporte para mantê-los após reiniciar o yabai."
+        save(); message = "Ajustes aplicados só agora. Use Salvar e aplicar para mantê-los após reiniciar."
+    }
+    func saveForStartup() async {
+        guard !busy else { return }; busy = true; defer { busy = false }
+        guard FileManager.default.isExecutableFile(atPath: binary) else { workspaceFailure("Instale ou selecione o yabai antes de salvar a configuração."); return }
+        let snapshot = commands
+        do {
+            _ = try StartupPersistence().install(binary: binary, commands: snapshot)
+            save()
+            let serviceResult = await run(["--start-service"])
+            guard serviceResult.code == 0 else {
+                workspaceFailure("Os ajustes foram salvos no disco, mas não foi possível confirmar o início automático do yabai.\n\n\(serviceResult.output)"); return
+            }
+            for command in snapshot {
+                let result = await run(command)
+                guard result.code == 0 else { workspaceFailure("Os ajustes foram salvos para a próxima inicialização, mas a aplicação agora foi interrompida. Confira a conexão e a permissão de Acessibilidade.\n\n\(result.output)"); return }
+            }
+            message = "Salvo! O yabai carregará estes ajustes ao iniciar o Mac, sem precisar abrir o Studio."
+        } catch { workspaceFailure("Não foi possível salvar para o início do Mac.\n\n\(error.localizedDescription)") }
     }
     func importLive() async {
         guard !busy else { return }; busy = true; defer { busy = false }
@@ -562,8 +580,8 @@ struct ContentBody: View {
                     Text("Segure a tecla escolhida: arraste com o botão esquerdo para mover ou com o direito para redimensionar.").font(.caption).foregroundStyle(.secondary)
                 }.padding(10)
             }
-            Text("Aplicar altera os padrões globais. Áreas de trabalho com ajustes próprios podem manter suas exceções.").font(.caption).foregroundStyle(.secondary)
-            AdaptiveRow { Button("Ler do yabai") { Task { await m.importLive() } }.disabled(!m.online || m.busy); Button("Exportar…") { m.export() }; Spacer(); Button("Aplicar ao yabai") { Task { await m.apply() } }.buttonStyle(.borderedProminent).disabled(!m.online || m.busy) }
+            Text("Salvar e aplicar mantém layout, margens, mouse e regras após reiniciar, sem abrir o Studio. Uma cópia da configuração existente é guardada antes de alterá-la. Ajustes afetam os padrões globais. Áreas de trabalho com ajustes próprios podem manter suas exceções.").font(.caption).foregroundStyle(.secondary)
+            AdaptiveRow { Button("Ler do yabai") { Task { await m.importLive() } }.disabled(!m.online || m.busy); Button("Aplicar só agora") { Task { await m.apply() } }.disabled(!m.online || m.busy); Button("Exportar…") { m.export() }; Spacer(); Button("Salvar e aplicar") { Task { await m.saveForStartup() } }.buttonStyle(.borderedProminent).disabled(m.binary.isEmpty || m.busy) }
         }
     }
     func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String) -> some View {
@@ -581,7 +599,7 @@ struct ContentBody: View {
             ForEach($m.rules) { $r in
                 AdaptiveRow { Image(systemName: "app.fill").foregroundStyle(.mint); Text(r.app).fontWeight(.medium); Spacer(); Picker("Modo", selection: $r.floating) { Text("Flutuante").tag(true); Text("Organizado").tag(false) }.labelsHidden().frame(width: 150); Button { let removed = r; Task { if m.online { m.busy = true; let result = await m.run(["-m", "rule", "--remove", removed.label]); m.busy = false; if result.code != 0 { m.message = "Não foi possível remover a regra no yabai: \(result.output)"; return } }; m.rules.removeAll { $0.id == removed.id } } } label: { Image(systemName: "trash") }.disabled(m.busy) }.padding().background(.white.opacity(0.04)).clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            Button("Aplicar ajustes e regras") { Task { await m.apply() } }.buttonStyle(.borderedProminent).disabled(!m.online || m.busy)
+            Button("Salvar e aplicar regras") { Task { await m.saveForStartup() } }.buttonStyle(.borderedProminent).disabled(m.binary.isEmpty || m.busy)
             Text("Excluir uma regra ativa exige conexão. Excluir não reposiciona janelas já abertas. Regras criadas fora deste app são preservadas.").font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -589,7 +607,7 @@ struct ContentBody: View {
         VStack(alignment: .leading, spacing: 16) {
             AdaptiveRow { TextField("Nome do perfil", text: $m.profileName); Button("Salvar atual") { m.profiles.append(Profile(name: m.profileName, settings: m.settings)); m.profileName = ""; m.save() }.disabled(m.profileName.trimmingCharacters(in: .whitespaces).isEmpty) }
             Text("Perfis guardam layout, margens, espaçamento e comportamento do cursor. As regras por aplicativo são compartilhadas entre todos os perfis.").foregroundStyle(.secondary)
-            ForEach(m.profiles) { p in AdaptiveRow { Label(p.name, systemImage: "square.stack.3d.up"); Spacer(); Button("Carregar ajustes") { m.settings = p.settings; m.message = "Perfil carregado: \(p.name). Revise e clique em Aplicar na aba Organização." }; Button(role: .destructive) { m.profiles.removeAll { $0.id == p.id }; m.save() } label: { Image(systemName: "trash") } }.padding().background(.white.opacity(0.04)).clipShape(RoundedRectangle(cornerRadius: 10)) }
+            ForEach(m.profiles) { p in AdaptiveRow { Label(p.name, systemImage: "square.stack.3d.up"); Spacer(); Button("Carregar ajustes") { m.settings = p.settings; m.message = "Perfil carregado: \(p.name). Revise e clique em Salvar e aplicar na aba Organização." }; Button(role: .destructive) { m.profiles.removeAll { $0.id == p.id }; m.save() } label: { Image(systemName: "trash") } }.padding().background(.white.opacity(0.04)).clipShape(RoundedRectangle(cornerRadius: 10)) }
         }
     }
     func setupStep(_ number: String, _ title: String, _ detail: String, done: Bool) -> some View {
