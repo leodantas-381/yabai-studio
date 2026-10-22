@@ -26,7 +26,7 @@ Se houver um `.dmg` disponível nas Releases do repositório:
 1. Abra o `.dmg` e arraste **Yabai Studio** para **Applications / Aplicativos**.
 2. Abra o app pela pasta Aplicativos.
 3. Em **Conexão**, clique em **Instalar yabai** e siga as instruções para permitir Acessibilidade.
-4. Em **Atalhos**, clique em **Instalar skhd → Ativar atalhos**. O skhd precisa de sua própria permissão de Acessibilidade.
+4. Em **Atalhos**, clique em **Instalar skhd → Salvar e ativar atalhos**. O skhd precisa de sua própria permissão de Acessibilidade.
 5. Volte ao Studio e clique em **Já autorizei**.
 6. Ajuste as preferências em **Organização** e clique em **Salvar e aplicar**.
 
@@ -133,3 +133,12 @@ O ícone do Studio foi criado com geração de imagens por IA. O projeto não é
 ## Licença
 
 O código do Studio é distribuído sob a [licença MIT](LICENSE). O skhd mantém sua [licença MIT original](ThirdParty/skhd/LICENSE.txt).
+
+
+### Recuperação do skhd após o login (0.7.1)
+
+O serviço mantém `RunAtLoad` ativo e volta a iniciar após uma saída por falha, com intervalo mínimo de 10 segundos. Isso cobre o encerramento do skhd quando a Entrada Segura do Teclado está temporariamente ativa durante o login. O Studio não desativa essa proteção: aguarda sua liberação pelo macOS.
+
+Após atualizar o Studio, clique uma vez em **Salvar e reaplicar atalhos** para instalar a nova política do serviço. O botão descarrega a definição anterior e a registra novamente; reiniciar somente o processo não atualiza a política de recuperação.
+
+Permissões de Acessibilidade continuam necessárias. Desativar os atalhos descarrega o serviço e remove seu arquivo de início no login, impedindo que ele volte a iniciar automaticamente.

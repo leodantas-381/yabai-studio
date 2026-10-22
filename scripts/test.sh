@@ -8,3 +8,6 @@ swiftc -parse-as-library Sources/HotkeyConfig.swift Tests/HotkeyTests.swift -mod
 build/tests/hotkeys
 swiftc -parse-as-library Sources/HotkeyConfig.swift Sources/StartupPersistence.swift Tests/StartupTests.swift -module-cache-path build/module-cache -o build/tests/startup
 build/tests/startup
+sed '/^@main struct StudioApp/,$d' Sources/main.swift > build/tests/ServiceModel.swift
+swiftc -parse-as-library build/tests/ServiceModel.swift Sources/Hotkeys.swift Sources/HotkeyConfig.swift Sources/Navigator.swift Sources/StartupPersistence.swift Tests/HotkeyServiceTests.swift -framework SwiftUI -framework AppKit -module-cache-path build/module-cache -o build/tests/hotkey-service
+build/tests/hotkey-service

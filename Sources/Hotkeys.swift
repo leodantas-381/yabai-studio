@@ -59,7 +59,7 @@ import AppKit
     func servicePlist() throws -> Data {
         try PropertyListSerialization.data(fromPropertyList: [
             "Label": label, "ProgramArguments": [tool.path,"--config",config.path],
-            "RunAtLoad": true, "KeepAlive": false,
+            "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false, "Crashed": true], "ThrottleInterval": 10,
             "ProcessType": "Interactive", "StandardOutPath": output.path, "StandardErrorPath": output.path,
             "EnvironmentVariables": ["USER": NSUserName(), "HOME": FileManager.default.homeDirectoryForCurrentUser.path, "SHELL": "/bin/sh", "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin"]
         ], format: .xml, options: 0)
@@ -88,9 +88,15 @@ import AppKit
             try HotkeyConfig.render(yabai: yabai, log: actionLog.path, navigator: helperTarget.path, skhd: tool.path).write(to: config, atomically: true, encoding: .utf8)
             try FileManager.default.createDirectory(at: agent.deletingLastPathComponent(), withIntermediateDirectories: true)
             try servicePlist().write(to: agent, options: .atomic)
-            var result: Result
-            if current.code == 0 { result = await runner("/bin/launchctl",["kickstart","-k",service]) }
-            else { result = await runner("/bin/launchctl",["bootstrap",domain,agent.path]) }
+            // Reload the job definition, not just the process: kickstart retains
+            // the previously loaded KeepAlive policy until the job is re-bootstrapped.
+            if current.code == 0 {
+                let unloaded = await runner("/bin/launchctl", ["bootout", service])
+                guard unloaded.code == 0 else { throw InstallError.failed("Os atalhos foram salvos, mas não foi possível recarregar o serviço.\n\(unloaded.output)") }
+            }
+            let enabled = await runner("/bin/launchctl", ["enable", service])
+            guard enabled.code == 0 else { throw InstallError.failed("Os atalhos foram salvos, mas o início automático não pôde ser habilitado.\n\(enabled.output)") }
+            let result = await runner("/bin/launchctl", ["bootstrap",domain,agent.path])
             guard result.code == 0 else { throw InstallError.failed("Não foi possível iniciar o skhd.\n\(result.output)") }
             try? await Task.sleep(nanoseconds: 700_000_000)
             await inspect()
@@ -124,13 +130,13 @@ struct HotkeyView: View {
                     if !manager.installed {
                         Button("Instalar skhd") { Task { await manager.install() } }.buttonStyle(.borderedProminent)
                     } else {
-                        Button(manager.running ? "Reaplicar atalhos" : "Ativar atalhos") { Task { await manager.activate(yabai: yabai) } }.buttonStyle(.borderedProminent)
+                        Button(manager.running ? "Salvar e reaplicar atalhos" : "Salvar e ativar atalhos") { Task { await manager.activate(yabai: yabai) } }.buttonStyle(.borderedProminent)
                         Button("Desativar") { Task { await manager.stop() } }
                     }
                     Button("Verificar") { Task { await manager.inspect() } }
                 }.disabled(manager.busy)
                 Text(manager.status).font(.callout).textSelection(.enabled)
-                Text("Ao ativar, o skhd iniciará também no login. O Studio usa uma configuração própria e não altera seu skhdrc existente.").font(.caption).foregroundStyle(.secondary)
+                Text("Os atalhos são salvos e iniciam no login, sem abrir o Studio. Se o macOS bloquear o teclado temporariamente durante o login, o serviço tenta novamente a cada 10 segundos. A configuração externa do skhd é preservada.").font(.caption).foregroundStyle(.secondary)
             }.padding(20).background(.white.opacity(0.04)).clipShape(RoundedRectangle(cornerRadius: 14))
             if !manager.error.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
